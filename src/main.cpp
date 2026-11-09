@@ -16,8 +16,11 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         float releaseTimer = 0.f;
         float previousPlayerX = 0.f;
         float speedEstimate = 0.f;
-        float reactionFrames = 2.0f;
+        float reactionFrames = 4.0f;
         bool initializedPosition = false;
+        float jumpCooldown = 0.f;
+        GameObject* lastTriggeredHazard = nullptr;
+        ButtonSprite* botSprite = nullptr;
     };
 
     void onEnter() {
@@ -27,6 +30,7 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         if (!menu) return;
 
         auto botSprite = ButtonSprite::create("BOT OFF", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
+        m_fields->botSprite = botSprite;
         auto jumpSprite = ButtonSprite::create("JUMP", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
         auto releaseSprite = ButtonSprite::create("RELEASE", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
         auto downSprite = ButtonSprite::create("R-", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
@@ -44,14 +48,17 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         if (slower) { slower->setPosition({75.f, 0.f}); menu->addChild(slower); }
         if (faster) { faster->setPosition({150.f, 0.f}); menu->addChild(faster); }
 
-        menu->setPosition({win.width / 2.f, 42.f});
-        this->addChild(menu, 10000);
+        // Keep controls screen-fixed instead of attaching them to the scrolling gameplay layer.
+        menu->setPosition({win.width / 2.f, 76.f});
+        auto scene = CCDirector::sharedDirector()->getRunningScene();
+        if (scene) scene->addChild(menu, 100000);
         log::info("[AI Auto Play] Controls ready");
     }
 
     void onBotToggle(CCObject*) {
         m_fields->enabled = !m_fields->enabled;
         if (!m_fields->enabled) releaseJump();
+        if (m_fields->botSprite) m_fields->botSprite->setString(m_fields->enabled ? "BOT ON" : "BOT OFF");
         log::info("[AI Auto Play] Bot {}", m_fields->enabled ? "ON" : "OFF");
     }
 
@@ -66,12 +73,12 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
     void onManualRelease(CCObject*) { releaseJump(); }
 
     void onReactionDown(CCObject*) {
-        m_fields->reactionFrames = std::max(0.5f, m_fields->reactionFrames - 0.25f);
+        m_fields->reactionFrames = std::max(1.0f, m_fields->reactionFrames - 0.25f);
         log::info("[AI Auto Play] Reaction: {:.2f}", m_fields->reactionFrames);
     }
 
     void onReactionUp(CCObject*) {
-        m_fields->reactionFrames = std::min(6.0f, m_fields->reactionFrames + 0.25f);
+        m_fields->reactionFrames = std::min(10.0f, m_fields->reactionFrames + 0.25f);
         log::info("[AI Auto Play] Reaction: {:.2f}", m_fields->reactionFrames);
     }
 
@@ -121,19 +128,26 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
             if (m_fields->releaseTimer <= 0.f) releaseJump();
         }
 
-        if (!m_fields->enabled || m_player1->m_isDead || !m_player1->m_isOnGround) return;
+        if (m_fields->jumpCooldown > 0.f) m_fields->jumpCooldown -= dt;
+        if (m_player1->m_isDead) { releaseJump(); return; }
+        if (!m_fields->enabled || !m_player1->m_isOnGround || m_fields->jumpCooldown > 0.f) return;
         auto hazard = getNextHazard(playerX);
         if (!hazard) return;
 
-        float distance = hazard->getPositionX() - playerX;
-        float halfWidth = m_player1->getContentSize().width * 0.5f;
-        float reactionDistance = std::max(18.f, m_fields->speedEstimate *
-            (m_fields->reactionFrames / 60.f)) + halfWidth + 8.f;
+        if (hazard == m_fields->lastTriggeredHazard) return;
 
-        if (distance <= reactionDistance && distance > 0.f && !m_fields->holdingJump) {
+        float hazardHalfWidth = hazard->getContentSize().width * std::abs(hazard->getScaleX()) * 0.5f;
+        float playerHalfWidth = m_player1->getContentSize().width * std::abs(m_player1->getScaleX()) * 0.5f;
+        float distance = hazard->getPositionX() - hazardHalfWidth - (playerX + playerHalfWidth);
+        float reactionDistance = std::max(24.f, m_fields->speedEstimate *
+            (m_fields->reactionFrames / 60.f)) + 10.f;
+
+        if (distance <= reactionDistance && distance > -4.f && !m_fields->holdingJump) {
             m_player1->pushButton(PlayerButton::Jump);
             m_fields->holdingJump = true;
-            m_fields->releaseTimer = 0.075f;
+            m_fields->releaseTimer = 0.065f;
+            m_fields->jumpCooldown = 0.10f;
+            m_fields->lastTriggeredHazard = hazard;
         }
     }
 };
