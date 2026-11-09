@@ -1,0 +1,11 @@
+{
+  "geode": "5.11.1",
+  "gd": {
+    "android": "2.2081"
+  },
+  "id": "hoangphuc8848.ai-auto-play",
+  "name": "AI Auto Play",
+  "version": "1.0.0",
+  "developer": "Hoang Phuc",
+  "description": "Offline adaptive auto-play helper for Geometry Dash."
+}
