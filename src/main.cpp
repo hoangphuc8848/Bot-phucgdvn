@@ -87,7 +87,7 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         GameObject* best = nullptr;
         float bestDistance = 100000.f;
         for (auto object : geode::cocos::CCArrayExt<GameObject, false>(m_objects)) {
-            if (!object || object->m_objectType != 2) continue;
+            if (!object || object->m_objectType != GameObjectType::Hazard) continue;
             float distance = object->getPositionX() - playerX;
             if (distance > 0.f && distance < bestDistance) {
                 bestDistance = distance;
