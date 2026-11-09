@@ -5,7 +5,7 @@
   },
   "id": "hoangphuc8848.ai-auto-play",
   "name": "AI Auto Play",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "developer": "Hoang Phuc",
-  "description": "Offline adaptive auto-play helper for Geometry Dash."
+  "description": "Offline adaptive Cube auto-play helper with screen-fixed controls and improved hazard timing."
 }
