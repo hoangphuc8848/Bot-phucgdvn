@@ -15,19 +15,67 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Geode mod
-        id: build
-        uses: geode-sdk/build-geode-mod@main
+      - name: Install Ninja
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Setup Geode CLI
+        uses: geode-sdk/cli/.github/actions/setup@main
         with:
-          target: Android64
-          sdk: given
-          build-config: Release
-          ccache-variant: ""
-          use-cpm-cache: false
+          version: latest
+
+      - name: Install Geode SDK
+        shell: bash
+        run: |
+          export CLI_PROFILE="${GITHUB_WORKSPACE}/cli-profile"
+          mkdir -p "$CLI_PROFILE/geode/mods"
+          geode profile add --name GithubActions "$CLI_PROFILE/GeometryDash.exe" win
+          geode sdk install "$GITHUB_WORKSPACE/geode-sdk-clone"
+          export GEODE_SDK="$GITHUB_WORKSPACE/geode-sdk-clone"
+          echo "GEODE_SDK=$GEODE_SDK" >> "$GITHUB_ENV"
+          geode sdk update "5.11.1"
+          geode sdk install-binaries --platform android64 --version "5.11.1"
+
+      - name: Repair CPM download source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GEODE_SDK/cmake"
+          curl --fail --location --retry 5 --retry-all-errors \
+            "https://raw.githubusercontent.com/cpm-cmake/CPM.cmake/v0.42.1/cmake/CPM.cmake" \
+            --output "$GEODE_SDK/cmake/CPM.cmake"
+          grep -q "CPMAddPackage" "$GEODE_SDK/cmake/CPM.cmake"
+          echo "Replaced failing GitHub Release downloader with the pinned upstream CPM.cmake v0.42.1."
+
+      - name: Configure and build Android64
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CPM_SOURCE_CACHE="$GITHUB_WORKSPACE/cpm-cache"
+          mkdir -p "$CPM_SOURCE_CACHE"
+          NDK_PATH="/usr/local/lib/android/sdk/ndk/29.0.14206865"
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DGEODE_CODEGEN_CMAKE_ARGS="-DCMAKE_C_COMPILER=clang;-DCMAKE_CXX_COMPILER=clang++;-G Ninja" \
+            -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/android.toolchain.cmake" \
+            -DANDROID_STL=c++_shared \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-23 \
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+            -DGEODE_DONT_INSTALL_MODS=ON \
+            -DGEODE_TARGET_PLATFORM=Android64
+          cmake --build build --config Release --parallel
+          mkdir -p output
+          find build -type f -name '*.geode' -exec cp {} output/ \;
+          test -n "$(find output -maxdepth 1 -type f -name '*.geode' -print -quit)"
 
       - name: Upload .geode artifact
         uses: actions/upload-artifact@v4
         with:
           name: AI-Auto-Play-Android64
-          path: ${{ steps.build.outputs.build-output }}/*.geode
+          path: output/*.geode
           if-no-files-found: error
