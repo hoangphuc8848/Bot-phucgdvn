@@ -35,7 +35,18 @@ jobs:
           export GEODE_SDK="$GITHUB_WORKSPACE/geode-sdk-clone"
           echo "GEODE_SDK=$GEODE_SDK" >> "$GITHUB_ENV"
           geode sdk update "5.11.1"
-          geode sdk install-binaries --platform android64 --version "5.11.1"
+          # GitHub Releases occasionally returns HTTP 504; retry the pinned SDK asset.
+          for attempt in {1..8}; do
+            echo "Installing Geode Android64 binaries (outer attempt $attempt/8)"
+            if geode sdk install-binaries --platform android64 --version "5.11.1"; then
+              break
+            fi
+            if [ "$attempt" -eq 8 ]; then
+              echo "Geode Android64 binaries could not be downloaded after 8 outer attempts."
+              exit 1
+            fi
+            sleep 20
+          done
 
       - name: Repair CPM download source
         shell: bash
