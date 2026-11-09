@@ -22,6 +22,8 @@ jobs:
           target: Android64
           sdk: given
           build-config: Release
+          ccache-variant: ""
+          use-cpm-cache: false
 
       - name: Upload .geode artifact
         uses: actions/upload-artifact@v4
