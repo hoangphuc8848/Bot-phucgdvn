@@ -9,93 +9,23 @@ permissions:
   contents: read
 
 jobs:
-  build-attempt-1:
+  build-android64:
     runs-on: ubuntu-latest
-    outputs:
-      build_result: ${{ steps.build.outcome }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build Geode mod (attempt 1)
+
+      - name: Build Geode mod
         id: build
-        continue-on-error: true
         uses: geode-sdk/build-geode-mod@main
         with:
           target: Android64
           sdk: given
           build-config: Release
+
       - name: Upload .geode artifact
-        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: AI-Auto-Play-Android64
           path: ${{ steps.build.outputs.build-output }}/*.geode
           if-no-files-found: error
-
-  build-attempt-2:
-    needs: build-attempt-1
-    if: always() && needs.build-attempt-1.outputs.build_result == 'failure'
-    runs-on: ubuntu-latest
-    outputs:
-      build_result: ${{ steps.build.outcome }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Build Geode mod (retry 2)
-        id: build
-        continue-on-error: true
-        uses: geode-sdk/build-geode-mod@main
-        with:
-          target: Android64
-          sdk: given
-          build-config: Release
-      - name: Upload .geode artifact
-        if: steps.build.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: AI-Auto-Play-Android64
-          path: ${{ steps.build.outputs.build-output }}/*.geode
-          if-no-files-found: error
-
-  build-attempt-3:
-    needs: build-attempt-2
-    if: always() && needs.build-attempt-2.outputs.build_result == 'failure'
-    runs-on: ubuntu-latest
-    outputs:
-      build_result: ${{ steps.build.outcome }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Build Geode mod (retry 3)
-        id: build
-        continue-on-error: true
-        uses: geode-sdk/build-geode-mod@main
-        with:
-          target: Android64
-          sdk: given
-          build-config: Release
-      - name: Upload .geode artifact
-        if: steps.build.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: AI-Auto-Play-Android64
-          path: ${{ steps.build.outputs.build-output }}/*.geode
-          if-no-files-found: error
-
-  report:
-    needs: [build-attempt-1, build-attempt-2, build-attempt-3]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check build attempts
-        env:
-          RESULT_1: ${{ needs.build-attempt-1.outputs.build_result }}
-          RESULT_2: ${{ needs.build-attempt-2.outputs.build_result }}
-          RESULT_3: ${{ needs.build-attempt-3.outputs.build_result }}
-        run: |
-          if [ "$RESULT_1" = "success" ] || [ "$RESULT_2" = "success" ] || [ "$RESULT_3" = "success" ]; then
-            echo "Geode build succeeded in at least one attempt."
-          else
-            echo "::error::All three Geode build attempts failed. Check the build logs."
-            exit 1
-          fi
