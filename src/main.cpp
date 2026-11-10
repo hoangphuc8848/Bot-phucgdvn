@@ -53,10 +53,16 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         float jumpCooldown = 0.f;
         GameObject* lastTriggeredHazard = nullptr;
         ButtonSprite* botSprite = nullptr;
+        bool deathRecorded = false;
+        int deathCount = 0;
+        float lastDeathX = -1.f;
     };
 
     void onEnter() {
         PlayLayer::onEnter();
+        m_fields->deathCount = Mod::get()->getSavedValue<int>("learning.deaths", 0);
+        m_fields->reactionFrames = Mod::get()->getSavedValue<float>("learning.reaction", 4.f);
+        m_fields->lastDeathX = Mod::get()->getSavedValue<float>("learning.last-death-x", -1.f);
         auto win = CCDirector::sharedDirector()->getWinSize();
         auto menu = CCMenu::create();
         if (!menu) return;
@@ -90,7 +96,29 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
     void onManualRelease(CCObject*) { releaseJump(); }
     void onReactionDown(CCObject*) { m_fields->reactionFrames = std::max(1.f, m_fields->reactionFrames - .25f); }
     void onReactionUp(CCObject*) { m_fields->reactionFrames = std::min(10.f, m_fields->reactionFrames + .25f); }
-    void onReactionReset(CCObject*) { m_fields->reactionFrames = 4.f; m_fields->lastTriggeredHazard = nullptr; }
+    void onReactionReset(CCObject*) {
+        m_fields->reactionFrames = 4.f;
+        m_fields->lastTriggeredHazard = nullptr;
+        Mod::get()->setSavedValue<float>("learning.reaction", 4.f);
+    }
+    void onShowMemory(CCObject*) {
+        auto message = fmt::format(
+            "Deaths learned: {}\nReaction timing: {:.2f} frames\nLast death X: {:.1f}\n\nThe bot stores these values between attempts and shifts its next jump earlier after a death.",
+            m_fields->deathCount, m_fields->reactionFrames, m_fields->lastDeathX
+        );
+        FLAlertLayer::create("BOT MEMORY", message, "OK")->show();
+    }
+    void learnFromDeath() {
+        if (m_fields->deathRecorded) return;
+        m_fields->deathRecorded = true;
+        ++m_fields->deathCount;
+        m_fields->lastDeathX = m_player1 ? m_player1->getPositionX() : -1.f;
+        // A death is treated as a late reaction. Move the next attempt slightly earlier.
+        m_fields->reactionFrames = std::min(10.f, m_fields->reactionFrames + 0.5f);
+        Mod::get()->setSavedValue<int>("learning.deaths", m_fields->deathCount);
+        Mod::get()->setSavedValue<float>("learning.reaction", m_fields->reactionFrames);
+        Mod::get()->setSavedValue<float>("learning.last-death-x", m_fields->lastDeathX);
+    }
 
     void releaseJump() {
         if (m_player1 && m_fields->holdingJump) m_player1->releaseButton(PlayerButton::Jump);
@@ -120,7 +148,7 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         m_fields->previousPlayerX = x;
         if (m_fields->holdingJump && (m_fields->releaseTimer -= dt) <= 0.f) releaseJump();
         if (m_fields->jumpCooldown > 0.f) m_fields->jumpCooldown -= dt;
-        if (m_player1->m_isDead) { releaseJump(); return; }
+        if (m_player1->m_isDead) { learnFromDeath(); releaseJump(); return; }
         if (!m_fields->enabled || !m_player1->m_isOnGround || m_fields->jumpCooldown > 0.f) return;
         auto hazard = getNextHazard(x);
         if (!hazard || hazard == m_fields->lastTriggeredHazard) return;
