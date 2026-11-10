@@ -35,18 +35,21 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
         auto releaseSprite = ButtonSprite::create("RELEASE", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
         auto downSprite = ButtonSprite::create("R-", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
         auto upSprite = ButtonSprite::create("R+", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
+        auto resetSprite = ButtonSprite::create("R0", 64, 0, 0.55f, true, "goldFont.fnt", "GJ_button_04.png", 24.f);
 
         auto bot = CCMenuItemSpriteExtra::create(botSprite, this, menu_selector(AIAutoPlayLayer::onBotToggle));
         auto jump = CCMenuItemSpriteExtra::create(jumpSprite, this, menu_selector(AIAutoPlayLayer::onManualJump));
         auto release = CCMenuItemSpriteExtra::create(releaseSprite, this, menu_selector(AIAutoPlayLayer::onManualRelease));
         auto slower = CCMenuItemSpriteExtra::create(downSprite, this, menu_selector(AIAutoPlayLayer::onReactionDown));
         auto faster = CCMenuItemSpriteExtra::create(upSprite, this, menu_selector(AIAutoPlayLayer::onReactionUp));
+        auto reset = CCMenuItemSpriteExtra::create(resetSprite, this, menu_selector(AIAutoPlayLayer::onReactionReset));
 
         if (bot) { bot->setPosition({-150.f, 0.f}); menu->addChild(bot); }
         if (jump) { jump->setPosition({-75.f, 0.f}); menu->addChild(jump); }
         if (release) { release->setPosition({0.f, 0.f}); menu->addChild(release); }
         if (slower) { slower->setPosition({75.f, 0.f}); menu->addChild(slower); }
         if (faster) { faster->setPosition({150.f, 0.f}); menu->addChild(faster); }
+        if (reset) { reset->setPosition({225.f, 0.f}); menu->addChild(reset); }
 
         // Keep controls screen-fixed instead of attaching them to the scrolling gameplay layer.
         menu->setPosition({win.width / 2.f, 76.f});
@@ -80,6 +83,12 @@ class $modify(AIAutoPlayLayer, PlayLayer) {
     void onReactionUp(CCObject*) {
         m_fields->reactionFrames = std::min(10.0f, m_fields->reactionFrames + 0.25f);
         log::info("[AI Auto Play] Reaction: {:.2f}", m_fields->reactionFrames);
+    }
+
+    void onReactionReset(CCObject*) {
+        m_fields->reactionFrames = 4.0f;
+        m_fields->lastTriggeredHazard = nullptr;
+        log::info("[AI Auto Play] Reaction reset to 4.00 frames");
     }
 
     void releaseJump() {
