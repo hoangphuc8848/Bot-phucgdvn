@@ -1,12 +1,15 @@
-# AI Auto Play
+# AI Auto Play — Ultimate Menu branch
 
-Offline Geometry Dash Geode mod for Android64.
+Android64 Geode mod targeting Geometry Dash 2.2.081 and Geode 5.11.1.
 
-## Current V1 scope
-- In-game controls: BOT ON/OFF, manual JUMP, RELEASE, reaction adjustment.
-- Adaptive Cube-only obstacle reaction heuristic.
-- No API, network access, or remote model.
-- Target: Geode 5.11.1 and Geometry Dash Android 2.2.081.
+## Implemented in this branch
+- Screen-fixed in-game control strip: BOT ON/OFF, manual JUMP, RELEASE.
+- Reaction timing adjustment with R- / R+ and a new R0 reset control.
+- Offline Cube hazard heuristic; no API key, cloud model, or network dependency.
+- GitHub Actions Android64 build workflow is enabled for this branch.
 
-## Limitations
-This is a prototype controller, not a frame-perfect solver. It does not claim 90–100% or a Grief completion. Ship, Wave, Ball, Robot, Spider and Swing controllers are not implemented yet. Test on a copy/test level first.
+## Honest limitations
+This is an incremental upgrade of the existing prototype, not an all-in-one clone of every Geode mod. The bot is heuristic and Cube-focused; it is not frame-perfect and does not guarantee completion. Ship, Wave, Ball, Robot, Spider and Swing automation are not implemented. Third-party mod features can only be integrated when their source/license and APIs permit it.
+
+## Build
+Pushes to `main` and `ultimate-menu-v1` run the Android64 workflow. Download the `.geode` artifact from the successful Actions run.
